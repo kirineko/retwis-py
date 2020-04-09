@@ -3,7 +3,7 @@ import settings
 import session
 import time
 from convert import to_dict, to_list, to_set, to_string
-from model import User, Post
+from model import User, Post, Timeline
 
 r = settings.r
 
@@ -32,6 +32,75 @@ def index():
         return res
     else:
         bottle.redirect('/signup')
+
+@bottle.get('/timeline')
+@bottle.view('timeline')
+def timeline():
+    user = islogin()
+    if user:
+        res = {
+            'username': user.username,
+            'posts': Timeline.posts(),
+            'users': User.users()
+        }
+        return res
+
+    bottle.redirect('/')
+
+@bottle.get('/<username>')
+@bottle.view('profile')
+def profile(username):
+    login_user = islogin()
+    user = User.find_by_username(username)
+    if user and login_user:
+        res = {
+            'username': user.username,
+            'loginname': login_user.username,
+            'followers': user.followers(),
+            'following': user.following(),
+            'followers_num': user.followers_num(),
+            'following_num': user.following_num(),
+            'posts': user.posts(),
+            'isfollowing': login_user.isfollowing(user)
+        }
+        return res
+    
+    bottle.redirect('/')
+
+@bottle.get('/<loginname>/follow/<username>')
+def follow(loginname, username):
+    login_user = User.find_by_username(loginname)
+    user = User.find_by_username(username)
+    if login_user and user:
+        login_user.add_following(user)
+        bottle.redirect('/{}'.format(user.username))
+    bottle.redirect('/')
+
+@bottle.get('/<loginname>/unfollow/<username>')
+def unfollow(loginname, username):
+    login_user = User.find_by_username(loginname)
+    user = User.find_by_username(username)
+    if login_user and user:
+        login_user.remove_following(user)
+        bottle.redirect('/{}'.format(user.username))
+    bottle.redirect('/')
+
+@bottle.get('/mentions/<username>')
+@bottle.view('mentions')
+def mentions(username):
+    login_user = islogin()
+    user = User.find_by_username(username)
+    if login_user and user:
+        res = {
+            'username': user.username,
+            'loginname': login_user.username,
+            'isfollowing': login_user.isfollowing(user),
+            'posts': user.mentions()
+        }
+        return res
+    
+    bottle.redirect('/')
+
 
 @bottle.get('/signup')
 @bottle.view('signup')
@@ -71,6 +140,12 @@ def login():
             bottle.redirect('/')
     
     return dict()
+
+@bottle.get('/logout')
+def logout():
+    sess = session.Session(bottle.request, bottle.response)
+    sess.invalided()
+    bottle.redirect('/')
 
 
 @bottle.post('/post')

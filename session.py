@@ -43,7 +43,7 @@ class Session(dict):
         return self._new
 
     def invalided(self):
-        self.response.set_cookie(self._name, '', expire='-100')
+        self.response.set_cookie(self._name, '', expires=-100)
         r.delete(self._sid)
         self.clear()
         self._invalid = True

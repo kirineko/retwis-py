@@ -3,8 +3,18 @@ from typing import Optional
 import settings
 from convert import to_dict, to_list, to_set, to_string
 import time
+import re
 
 r = settings.r
+
+class Timeline:
+    @staticmethod
+    def posts(page = 1, num = 10):
+        start = (page - 1) * num
+        end = page * num - 1
+        posts_id = to_list(r.lrange('timeline', start, end))
+        return [Post(pid) for pid in posts_id]
+
 
 class User:
     def __init__(self, id : int):
@@ -40,7 +50,16 @@ class User:
             return User(int(uid))
         return None
 
+    @staticmethod
+    def users():
+        users = to_dict(r.hgetall('users'))
+        return [User(uid) for username, uid in users.items()]
+
     def posts(self) -> List[Post]:
+        posts_id = to_list(r.lrange('user:{}:posts'.format(self.id), 0, 9))
+        return [Post(pid) for pid in posts_id]
+
+    def timeline(self) -> List[Post]:
         posts_id = to_list(r.lrange('user:{}:timeline'.format(self.id), 0, 9))
         return [Post(pid) for pid in posts_id]
         
@@ -57,6 +76,30 @@ class User:
 
     def following_num(self) -> int:
         return r.scard('user:{}:following'.format(self.id))
+
+    def isfollowing(self, user: User) -> bool:
+        return r.sismember('user:{}:following'.format(self.id), user.id)
+
+    def add_following(self, user: User) -> bool:
+        if self.id != user.id:
+            r.sadd('user:{}:following'.format(self.id), user.id)
+            r.sadd('user:{}:followers'.format(user.id), self.id)
+            return True
+        return False
+
+    def remove_following(self, user: User) -> bool:
+        if self.id != user.id:
+            r.srem('user:{}:following'.format(self.id), user.id)
+            r.srem('user:{}:followers'.format(user.id), self.id)
+            return True
+        return False
+
+    def add_mention(self, pid: int):
+        r.lpush('user:{}:mentions'.format(self.id), pid)
+
+    def mentions(self):
+        posts_id = to_list(r.lrange('user:{}:mentions'.format(self.id), 0, 9))
+        return [Post(pid) for pid in posts_id]
 
 class Post:
     def __init__(self, id: int):
@@ -86,6 +129,13 @@ class Post:
         r.lpush('user:{}:posts'.format(user.id), pid)
         r.lpush('timeline', pid)
         r.sadd('posts:id', pid)
+
+
+        mentions = re.findall('@\w+', content)
+        for mention in mentions:
+            u = User.find_by_username(mention[1:])
+            u.add_mention(int(pid))  
+
         return Post(int(pid))
 
     @property

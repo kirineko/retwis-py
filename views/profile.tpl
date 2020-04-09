@@ -1,19 +1,23 @@
-
-% include('shared/header.tpl', username=username)
+% include('shared/header.tpl', username=loginname)
 
 <div class="span-24">
     <div class="span-16">
-        <div id="updateform" class="box">
-            <form action="/post" method="post">
-                {{username}}, what's on your mind?
-                <textarea name="content" id="" cols="70" rows="3"></textarea>
-                <br>
-                <input type="submit" value="Update">
-            </form>
+        <h2> {{ username }}</h2>
+
+        % if username != loginname:
+        <div class="box">
+            % if not isfollowing:
+            <a href="/{{ loginname }}/follow/{{ username }}">Following</a>
+            % else:
+            <a href="/{{ loginname }}/unfollow/{{ username }}">Stop Following</a>
+            % end
+            | <a href="/mentions/{{ username }}">See Mentions</a>
         </div>
+        % end
 
         % include('shared/posts.tpl', posts=posts)
     </div>
+
 
     <div class="span-7 last">
         <div class="box">
@@ -28,4 +32,4 @@
     </div>
 </div>
 
-% include('shared/footer.tpl')      
+% include('shared/footer.tpl')
