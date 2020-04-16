@@ -24,7 +24,7 @@ pip install -r .\requirement.txt
 
 省略
 
-### 3. 在当前目录下启动Python服务
+## 3. 在当前目录下启动Python服务
 
 ```
 python index.py
