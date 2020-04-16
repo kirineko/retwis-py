@@ -101,6 +101,9 @@ class User:
         posts_id = to_list(r.lrange('user:{}:mentions'.format(self.id), 0, 9))
         return [Post(pid) for pid in posts_id]
 
+    def add_timeline(self, pid: int):
+        r.lpush('user:{}:timeline'.format(self.id), pid)
+
 class Post:
     def __init__(self, id: int):
         self.id = id
@@ -130,6 +133,9 @@ class Post:
         r.lpush('timeline', pid)
         r.sadd('posts:id', pid)
 
+        followers = user.followers()
+        for follow in followers:
+            follow.add_timeline(int(pid))
 
         mentions = re.findall('@\w+', content)
         for mention in mentions:

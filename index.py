@@ -23,7 +23,7 @@ def index():
     if user:
         res = {
             'username': user.username,
-            'posts': user.posts(),
+            'posts': user.timeline(),
             'followers': user.followers(),
             'following': user.following(),
             'followers_num': user.followers_num(),
